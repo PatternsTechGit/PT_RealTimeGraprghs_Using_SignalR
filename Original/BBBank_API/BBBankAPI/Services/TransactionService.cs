@@ -2,6 +2,7 @@
 using Entities.Request;
 using Entities.Responses;
 using Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 using Services.Contracts;
 using System;
 using System.Collections.Generic;
@@ -14,9 +15,11 @@ namespace Services
     public class TransactionService : ITransactionService
     {
         private readonly BBBankContext _bbBankContext;
-        public TransactionService(BBBankContext BBBankContext)
+        private readonly IHubContext<TransactionHUB> _transactionHubContext; 
+        public TransactionService(BBBankContext BBBankContext, IHubContext<TransactionHUB> transactionHubContext)
         {
             _bbBankContext = BBBankContext;
+            _transactionHubContext = transactionHubContext;
         }
 
         public async Task<LineGraphData> GetLast12MonthBalances(string? userId)
@@ -66,21 +69,33 @@ namespace Services
         }
         public async Task<int> DepositFunds(DepositRequest depositRequest)
         {
-            var account = _bbBankContext.Accounts.Where(x => x.AccountNumber == depositRequest.AccountId).FirstOrDefault();
-            if (account == null)
-                return -1;
-            else
+            try
             {
-                var transaction = new Transaction()
+                var account = _bbBankContext.Accounts.Where(x => x.AccountNumber == depositRequest.AccountId).FirstOrDefault();
+                if (account == null)
+                    return -1;
+                else
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    TransactionAmount = depositRequest.Amount,
-                    TransactionDate = DateTime.UtcNow,
-                    TransactionType = TransactionType.Deposit
-                };
-                if (account.Transactions != null)
-                    account.Transactions.Add(transaction);
-                return 1;
+                    var transaction = new Transaction()
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        TransactionAmount = depositRequest.Amount,
+                        TransactionDate = DateTime.UtcNow,
+                        TransactionType = TransactionType.Deposit
+                    };
+                    if (account.Transactions != null)
+                        account.Transactions.Add(transaction);
+
+                    // technically bank manager cannot access this function.
+                    await _transactionHubContext.Clients.All.SendAsync("updateGraphsData", "userId123");
+
+                    return 1;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                throw;
             }
         }
     }

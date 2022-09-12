@@ -12,11 +12,8 @@ export class DashboardComponent implements OnInit {
   @ViewChild('chartBig1') myCanvas: ElementRef;
 
   lineGraphData: lineGraphData;
-
   gradientChartOptionsConfigurationWithTooltipRed: any;
-
   public myChartData: any;
-
   public context: CanvasRenderingContext2D;
 
   constructor(private transactionService: TransactionService) {
@@ -75,6 +72,10 @@ export class DashboardComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
+   this.initializeGraph()
+  }
+
+  initializeGraph(){
     this.context = (this.myCanvas
       .nativeElement as HTMLCanvasElement).getContext('2d');
     this.transactionService

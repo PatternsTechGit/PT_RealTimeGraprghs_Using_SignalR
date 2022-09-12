@@ -9,6 +9,7 @@ namespace Entities
     public class Account : BaseEntity // Inheriting from Base Entity class
     {
         // String that uniquely identifies the account
+        public string UserId { get; set; }
         public string AccountNumber { get; set; }
 
         //Title of teh account

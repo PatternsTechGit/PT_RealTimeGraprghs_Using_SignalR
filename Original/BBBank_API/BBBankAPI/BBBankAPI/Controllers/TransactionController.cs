@@ -1,6 +1,8 @@
 ﻿using Entities.Request;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Services;
 using Services.Contracts;
 
 namespace BBBankAPI.Controllers
@@ -10,7 +12,7 @@ namespace BBBankAPI.Controllers
     public class TransactionController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
-        public TransactionController(ITransactionService transactionService)
+        public TransactionController(IHubContext<TransactionHUB> hubContext, ITransactionService transactionService)
         {
             _transactionService = transactionService;
         }

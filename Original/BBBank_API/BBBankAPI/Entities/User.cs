@@ -19,7 +19,8 @@ namespace Entities
 
         // Profile picture or avatar
         public string ProfilePicUrl { get; set; }
-
+        public string PhoneNumber { get; set; }
+        
         // Account attached to the user 
         public Account Account { get; set; }
     }
