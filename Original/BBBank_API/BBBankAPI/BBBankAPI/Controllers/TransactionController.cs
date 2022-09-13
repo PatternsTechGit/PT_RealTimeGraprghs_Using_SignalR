@@ -12,7 +12,7 @@ namespace BBBankAPI.Controllers
     public class TransactionController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
-        public TransactionController(IHubContext<TransactionHUB> hubContext, ITransactionService transactionService)
+        public TransactionController(ITransactionService transactionService)
         {
             _transactionService = transactionService;
         }

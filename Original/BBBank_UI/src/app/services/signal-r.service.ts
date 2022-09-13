@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { environment } from 'src/environments/environment';
+import { GlobalService } from './global.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ import { environment } from 'src/environments/environment';
 export class SignalRService {
   private hubConnection: HubConnection;
 
-  constructor() {
+  constructor(private globalService : GlobalService ) {
   }
 
   public connectToTransactionHub = () => {
@@ -27,6 +28,8 @@ export class SignalRService {
     this.hubConnection.on('updateGraphsData', (userId : string) => {
      console.log('addUpdateGraphsDataListener', userId);
      
+     this.globalService.sendData(userId);
+
     });
   }
 }

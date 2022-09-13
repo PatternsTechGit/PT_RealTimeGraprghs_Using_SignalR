@@ -1,6 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Chart } from 'chart.js';
 import { lineGraphData } from '../models/line-graph-data';
+import { GlobalService } from '../services/global.service';
 import { TransactionService } from '../services/transaction.service';
 
 @Component({
@@ -16,7 +17,7 @@ export class DashboardComponent implements OnInit {
   public myChartData: any;
   public context: CanvasRenderingContext2D;
 
-  constructor(private transactionService: TransactionService) {
+  constructor(private transactionService: TransactionService, private globalService : GlobalService ) {
     this.gradientChartOptionsConfigurationWithTooltipRed = {
       maintainAspectRatio: false,
       legend: {
@@ -72,7 +73,15 @@ export class DashboardComponent implements OnInit {
   }
 
   ngAfterViewInit(): void {
-   this.initializeGraph()
+   this.getData()
+  }
+
+  getData() {
+    this.globalService.data.subscribe(response => {
+      console.log(response);  
+
+      this.initializeGraph()
+    });
   }
 
   initializeGraph(){
