@@ -82,16 +82,204 @@ _____________
 * **Install required packages**
 * Add **configuration for signalR** in the `program.cs`
 * Create a **TransactionHUB class**
-* **Inject TransactionHUB with IHubContext** and modify the 
-* We will **create an account service**  and a contract for this service in the **Service** project 
-* We will **register this service in a pipeline** as scoped 
-* We will **create an account controller**  with method **AccountNumberExists(string accountNumber)**
-* We will **add some fake accounts** 
+* **Inject TransactionHUB with IHubContext** and modify the transaction service 
 
   **Frontend Code**
-* We will **create an account service** 
-* We will **create custom account number validator directive**  
-* We will **add a template driven form** in the HTML file of appComponent 
+* **Install required packages**
+* We will **create an signalR service** 
+* We will **create an global service** 
+* We will **subscribe the global service observable to initialize the graph**  
 
 ## **Backend Implementation**
-Follow the below steps to implement backend code for custom validation with debounce pattern 
+Follow the below steps to implement backend code 
+
+### **SignalR Resource**
+Create a signalR resource in the Azure and copy its connection string for later use
+  
+### **Install required packages**
+Install the given packages in the **Services** project of the solution from package manager consol  
+
+```cs
+Microsoft.Azure.SignalR
+```
+
+### **Configuration for signalR**
+Add the connection string for the signalR in the `appSetting.json` file as given below
+
+```json
+"SignalRConnectionString": "Endpoint=https://************.service.signalr.net;AccessKey=4k1fcO4fUwzqmeSTi/CWrwr0E891PmXRf3lR5mlIvpU=;Version=1.0;",
+```
+
+Add configuration for signalR in the `program.cs` as given below
+
+```cs
+//Confiuration Builder based on AppSettings File
+var appSettingsFileSettings = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+// builder.Services.AddScoped<ModuleLoader>();
+var SignalRConString = appSettingsFileSettings["SignalRConnectionString"];
+builder.Services.AddSignalR().AddAzureSignalR(SignalRConString);
+
+//Adding signalr middleware
+app.UseEndpoints(endpoints =>
+{
+    // letting application know about diffrent hubs in our aplicaiton 
+    // mapping hub to a route (one route per hub)
+    endpoints.MapHub<TransactionHUB>("/api/updateAll");
+});
+```
+
+### **TransactionHUB Class**
+Create a TransactionHUB class in the **Services** project. This class acts as a hub and responsible for sending data to the clients.
+
+The code is given below
+```cs
+ public class TransactionHUB : Hub
+    {
+        public async Task Send()
+        {
+            // Call the broadcastMessage method to update clients.
+            await Clients.All.SendAsync("updateGraphsData");
+        }
+    }
+```
+
+### **Modify Transaction Service**
+Inject TransactionHUB with IHubContext and modify the **DepositFunds** method of the transaction service to send pass the function name as a first parameter and data as a second  
+
+The code is given below
+```cs
+private readonly BBBankContext _bbBankContext;
+        private readonly IHubContext<TransactionHUB> _transactionHubContext; 
+        public TransactionService(BBBankContext BBBankContext, IHubContext<TransactionHUB> transactionHubContext)
+        {
+            _bbBankContext = BBBankContext;
+            _transactionHubContext = transactionHubContext;
+        }
+
+public async Task<int> DepositFunds(DepositRequest depositRequest)
+        {
+            try
+            {
+                var account = _bbBankContext.Accounts.Where(x => x.AccountNumber == depositRequest.AccountId).FirstOrDefault();
+                if (account == null)
+                    return -1;
+                else
+                {
+                    var transaction = new Transaction()
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        TransactionAmount = depositRequest.Amount,
+                        TransactionDate = DateTime.UtcNow,
+                        TransactionType = TransactionType.Deposit
+                    };
+                    if (account.Transactions != null)
+                        account.Transactions.Add(transaction);
+
+                    // technically bank manager cannot access this function.
+                    await _transactionHubContext.Clients.All.SendAsync("updateGraphsData", "userId123");
+
+                    return 1;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+        }
+```
+
+## **Frontend Implementation**
+Follow the below steps to implement frontend code
+
+### **Install Required Packages**
+Install the signalR package from the command line 
+
+```ts
+npm i @microsoft/signalr
+```
+
+### **SignalR Service**
+We will create an signalR service in the **services** folder. Open the integrated terminal by right clicking on the folder and run the given command  
+
+```ts
+ng generate service signalR
+```
+Add the given code in the service
+
+```ts
+@Injectable({
+  providedIn: 'root'
+})
+export class SignalRService {
+  private hubConnection: HubConnection;
+
+  constructor(private globalService : GlobalService ) {
+  }
+
+  public connectToTransactionHub = () => {
+    this.hubConnection = new HubConnectionBuilder()
+      .withUrl(environment.apiUrlBase + 'updateAll',{
+      })
+      .build();
+    this.hubConnection
+      .start()
+      .then(() => console.log('SignalR Connection Established', "BBBank"))
+      .catch(err => console.log('Error while starting connection: ' + err, "BBBank"));
+  }
+
+  public addUpdateGraphsDataListener = () => {
+    this.hubConnection.on('updateGraphsData', (userId : string) => {
+     console.log('addUpdateGraphsDataListener', userId);
+     
+     this.globalService.sendData(userId);
+
+    });
+  }
+}
+```
+
+### **Global Service**
+We will create an global service in the **services** folder. Open the integrated terminal by right clicking on the folder and run the given command  
+
+```ts
+ng generate service global
+```
+Add the given code in the service
+
+```ts
+@Injectable({
+  providedIn: 'root'
+})
+export class GlobalService {
+  
+  private dataSource: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  data: Observable<string> = this.dataSource.asObservable();
+
+  constructor() { }
+
+  sendData(data: string) {
+    this.dataSource.next(data);
+  }
+}
+```
+
+### **Real-time Graph**
+In the dashboard component, add the given method which will subscribe the global service observable and initializes the graph every time the funds are deposited. 
+
+```ts
+  getData() {
+    this.globalService.data.subscribe(response => {
+      console.log(response);  
+
+      this.initializeGraph()
+    });
+  }
+```
+
+### Conclusion
+abcd
