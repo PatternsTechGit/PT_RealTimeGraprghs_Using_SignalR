@@ -93,11 +93,21 @@ _____________
 * **Step 4: Subscribe the global service observable to initialize the graph** 
 * **Step 5: Configuring SignalRService** in app Component 
 
-## **Cloud Configuration**
-### **Step 1: SignalR Resource**
-Create a signalR resource in the Azure and copy its connection string for later use
+# **Cloud Configuration**
+### **Step 1: SignalR Configuration**
+Go to [Azure Portal](https://portal.azure.com/), search SignalR and click create button.
 
-## **Backend Implementation**
+Enter the required details and click `Review + create` button.
+![111](https://user-images.githubusercontent.com/100709775/190474558-51a0667e-c09f-4ee8-b91c-14dbc39544cb.PNG)
+
+
+Once the **SignalR** resource is created then click on the **Go to resources**.
+
+Click on the `Connection String` menu and copy the connection string.
+
+![2](https://user-images.githubusercontent.com/100709775/190474328-d1c5258d-4a1d-4c2e-bad1-0ec4dd0f8f15.PNG)
+
+# **Backend Implementation**
 Follow the below steps to implement backend code 
 
 ### **Step 1: Install required packages**
@@ -140,7 +150,6 @@ app.UseEndpoints(endpoints =>
 ### **Step 3: TransactionHUB Class**
 Create a TransactionHUB class in the **Services** project. This class acts as a hub and responsible for sending data to the clients.
 
-The code is given below
 ```cs
  public class TransactionHUB : Hub
     {
@@ -153,9 +162,8 @@ The code is given below
 ```
 
 ### **Step 4: Modify Transaction Service**
-Inject TransactionHUB with IHubContext and modify the **DepositFunds** method of the transaction service to send pass the function name as a first parameter and data as a second  
+Inject TransactionHUB with IHubContext and modify the **DepositFunds** method of the transaction service to send pass the function name as a first parameter and data as a second, as below 
 
-The code is given below
 ```cs
 private readonly BBBankContext _bbBankContext;
         private readonly IHubContext<TransactionHUB> _transactionHubContext; 
@@ -198,7 +206,7 @@ public async Task<int> DepositFunds(DepositRequest depositRequest)
         }
 ```
 
-## **Frontend Implementation**
+# **Frontend Implementation**
 Follow the below steps to implement frontend code
 
 ### **Step 1: Install Required Packages**
@@ -214,9 +222,8 @@ We will create an signalR service in the **services** folder. Open the integrate
 ```ts
 ng generate service signalR
 ```
-This service has two methods, **connectToTransactionHub** is responsible for hub creation and signalR connection establisher and the **addUpdateGraphsDataListener** is responsible for triggering the signalR. 
+This service has two methods, **connectToTransactionHub** is responsible for hub creation and signalR connection establisher and the **addUpdateGraphsDataListener** is responsible for triggering the signalR, as below  
 
-Add the given code in the service
 
 ```ts
 import { Injectable } from '@angular/core';
@@ -260,9 +267,7 @@ We will create an global service in the **services** folder. Open the integrated
 ```ts
 ng generate service global
 ```
-This service is responsible for communication between the components using the **BehaviorSubject** from RxJs. We created an observable which will be subscribed by the dashboard component for graph.
-
-Add the given code in the service
+This service is responsible for communication between the components using the **BehaviorSubject** from RxJs. We created an observable which will be subscribed by the dashboard component for graph, as below 
 
 ```ts
 import { Injectable } from '@angular/core';
@@ -412,8 +417,6 @@ export class DashboardComponent {
 ### **Step 5: Configuring SignalRService in app Component**
 Now, configuring the signalRService in `app.component.ts`. These service methods will be invoked initially when the app starts, which will be triggered by the signalR later
 
-The code is given below
-
 ```ts
 export class AppComponent implements OnInit{
   constructor(public signalRService: SignalRService) {
@@ -425,5 +428,5 @@ export class AppComponent implements OnInit{
   }
 }
 ```
-### **Final Output**
+# **Final Output**
 In this lab, we have created two components, onw for real-time graph and the other for the funds transfer. We created a signalR resource and which updates the graph whenever the funds are transferred from onw account to the other.
