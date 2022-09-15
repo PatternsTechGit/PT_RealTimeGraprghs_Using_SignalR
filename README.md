@@ -77,33 +77,37 @@ _____________
 
 ## **In this exercise**
 
-  **Backend Code**
-* We will **create a signalR resource** in the Azure
-* **Install required packages**
-* Add **configuration for signalR** in the `program.cs`
-* Create a **TransactionHUB class**
-* **Inject TransactionHUB with IHubContext** and modify the transaction service 
+**Cloud Configuration**
+* **Step 1: Create a signalR resource** in the Azure
 
-  **Frontend Code**
-* **Install required packages**
-* We will **create an signalR service** 
-* We will **create an global service** 
-* We will **subscribe the global service observable to initialize the graph**  
+**Backend Code**
+* **Step 1: Install required packages**
+* **Step 2: Add configuration for signalR** in the `program.cs`
+* **Step 3: Create aTransactionHUB class**
+* **Step 4: Inject TransactionHUB with IHubContext** and modify the transaction service 
+
+**Frontend Code**
+* **Step 1: Install required packages**
+* **Step 2: Create an signalR service** 
+* **Step 3: Create an global service** 
+* **Step 4: Subscribe the global service observable to initialize the graph** 
+* **Step 5: Configuring SignalRService** in app Component 
+
+## **Cloud Configuration**
+### **Step 1: SignalR Resource**
+Create a signalR resource in the Azure and copy its connection string for later use
 
 ## **Backend Implementation**
 Follow the below steps to implement backend code 
 
-### **SignalR Resource**
-Create a signalR resource in the Azure and copy its connection string for later use
-  
-### **Install required packages**
+### **Step 1: Install required packages**
 Install the given packages in the **Services** project of the solution from package manager consol  
 
 ```cs
 Microsoft.Azure.SignalR
 ```
 
-### **Configuration for signalR**
+### **Step 2: Configuration for signalR**
 Add the connection string for the signalR in the `appSetting.json` file as given below
 
 ```json
@@ -123,6 +127,7 @@ var appSettingsFileSettings = new ConfigurationBuilder()
 var SignalRConString = appSettingsFileSettings["SignalRConnectionString"];
 builder.Services.AddSignalR().AddAzureSignalR(SignalRConString);
 
+app.UseRouting();
 //Adding signalr middleware
 app.UseEndpoints(endpoints =>
 {
@@ -132,7 +137,7 @@ app.UseEndpoints(endpoints =>
 });
 ```
 
-### **TransactionHUB Class**
+### **Step 3: TransactionHUB Class**
 Create a TransactionHUB class in the **Services** project. This class acts as a hub and responsible for sending data to the clients.
 
 The code is given below
@@ -147,7 +152,7 @@ The code is given below
     }
 ```
 
-### **Modify Transaction Service**
+### **Step 4: Modify Transaction Service**
 Inject TransactionHUB with IHubContext and modify the **DepositFunds** method of the transaction service to send pass the function name as a first parameter and data as a second  
 
 The code is given below
@@ -196,22 +201,30 @@ public async Task<int> DepositFunds(DepositRequest depositRequest)
 ## **Frontend Implementation**
 Follow the below steps to implement frontend code
 
-### **Install Required Packages**
+### **Step 1: Install Required Packages**
 Install the signalR package from the command line 
 
 ```ts
 npm i @microsoft/signalr
 ```
 
-### **SignalR Service**
+### **Step 2: SignalR Service**
 We will create an signalR service in the **services** folder. Open the integrated terminal by right clicking on the folder and run the given command  
 
 ```ts
 ng generate service signalR
 ```
+This service has two methods, **connectToTransactionHub** is responsible for hub creation and signalR connection establisher and the **addUpdateGraphsDataListener** is responsible for triggering the signalR. 
+
 Add the given code in the service
 
 ```ts
+import { Injectable } from '@angular/core';
+import * as signalR from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { environment } from '../environments/environment';
+import { GlobalService } from './global.service';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -234,8 +247,6 @@ export class SignalRService {
 
   public addUpdateGraphsDataListener = () => {
     this.hubConnection.on('updateGraphsData', (userId : string) => {
-     console.log('addUpdateGraphsDataListener', userId);
-     
      this.globalService.sendData(userId);
 
     });
@@ -243,15 +254,20 @@ export class SignalRService {
 }
 ```
 
-### **Global Service**
+### **Step 3: Global Service**
 We will create an global service in the **services** folder. Open the integrated terminal by right clicking on the folder and run the given command  
 
 ```ts
 ng generate service global
 ```
+This service is responsible for communication between the components using the **BehaviorSubject** from RxJs. We created an observable which will be subscribed by the dashboard component for graph.
+
 Add the given code in the service
 
 ```ts
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -268,10 +284,76 @@ export class GlobalService {
 }
 ```
 
-### **Real-time Graph**
-In the dashboard component, add the given method which will subscribe the global service observable and initializes the graph every time the funds are deposited. 
+### **Step 4: Real-time Graph**
+In the dashboard component, **cut the body of ngAfterViewInit and create a new method named initializeGraph and paste the code**. Now create getData method and call this method in ngAfterViewInit. The **getData method**  will subscribe the global service observable and initializes the graph every time the funds are deposited.   
+
+The **DashboardComponent** would look like this
 
 ```ts
+export class DashboardComponent {
+  @ViewChild('chartBig1') myCanvas: ElementRef;
+
+  lineGraphData: lineGraphData;
+  gradientChartOptionsConfigurationWithTooltipRed: any;
+  public myChartData: any;
+  public context: CanvasRenderingContext2D;
+
+  constructor(private transactionService: TransactionService, private globalService : GlobalService ) {
+    this.gradientChartOptionsConfigurationWithTooltipRed = {
+      maintainAspectRatio: false,
+      legend: {
+        display: false,
+      },
+
+      tooltips: {
+        backgroundColor: '#f5f5f5',
+        titleFontColor: '#333',
+        bodyFontColor: '#666',
+        bodySpacing: 4,
+        xPadding: 12,
+        mode: 'nearest',
+        intersect: 0,
+        position: 'nearest',
+      },
+      responsive: true,
+      scales: {
+        yAxes:
+          {
+            barPercentage: 1.6,
+            gridLines: {
+              drawBorder: false,
+              color: 'rgba(29,140,248,0.0)',
+              zeroLineColor: 'transparent',
+            },
+            ticks: {
+              suggestedMin: 60,
+              suggestedMax: 125,
+              padding: 20,
+              fontColor: '#9a9a9a',
+            },
+          },
+
+        xAxes:
+          {
+            barPercentage: 1.6,
+            gridLines: {
+              drawBorder: false,
+              color: 'rgba(233,32,16,0.1)',
+              zeroLineColor: 'transparent',
+            },
+            ticks: {
+              padding: 20,
+              fontColor: '#9a9a9a',
+            },
+          },
+      },
+    };
+  }
+
+  ngAfterViewInit(): void {
+   this.getData()
+  }
+
   getData() {
     this.globalService.data.subscribe(response => {
       console.log(response);  
@@ -279,7 +361,69 @@ In the dashboard component, add the given method which will subscribe the global
       this.initializeGraph()
     });
   }
-```
 
-### Conclusion
-abcd
+  initializeGraph(){
+    this.context = (this.myCanvas
+      .nativeElement as HTMLCanvasElement).getContext('2d');
+    this.transactionService
+      .GetLast12MonthBalances('aa45e3c9-261d-41fe-a1b0-5b4dcf79cfd3')
+      .subscribe({
+        next: (data: lineGraphData) => {
+          this.lineGraphData = data;
+
+          const gradientStroke = this.context.createLinearGradient(0, 230, 0, 50);
+          gradientStroke.addColorStop(1, 'rgba(233,32,16,0.2)');
+          gradientStroke.addColorStop(0.4, 'rgba(233,32,16,0.0)');
+          gradientStroke.addColorStop(0, 'rgba(233,32,16,0)'); // red colors
+
+          this.myChartData = new Chart(this.context, {
+            type: 'line',
+            data: {
+              labels: this.lineGraphData?.labels,
+              datasets: [
+                {
+                  label: 'Last 12 Month Balances',
+                  fill: true,
+                  backgroundColor: gradientStroke,
+                  borderColor: '#ec250d',
+                  borderWidth: 2,
+                  borderDashOffset: 0.0,
+                  pointBackgroundColor: '#ec250d',
+                  pointBorderColor: 'rgba(255,255,255,0)',
+                  pointHoverBackgroundColor: '#ec250d',
+                  pointBorderWidth: 20,
+                  pointHoverRadius: 4,
+                  pointHoverBorderWidth: 15,
+                  pointRadius: 4,
+                  data: this.lineGraphData?.figures,
+                },
+              ],
+            },
+            options: this.gradientChartOptionsConfigurationWithTooltipRed,
+          });
+        },
+        error: (error: any) => {
+          console.log(error);
+        },
+      });
+  }
+}
+```
+### **Step 5: Configuring SignalRService in app Component**
+Now, configuring the signalRService in `app.component.ts`. These service methods will be invoked initially when the app starts, which will be triggered by the signalR later
+
+The code is given below
+
+```ts
+export class AppComponent implements OnInit{
+  constructor(public signalRService: SignalRService) {
+  }
+
+  ngOnInit(): void {
+    this.signalRService.connectToTransactionHub();
+    this.signalRService.addUpdateGraphsDataListener();
+  }
+}
+```
+### **Final Output**
+In this lab, we have created two components, onw for real-time graph and the other for the funds transfer. We created a signalR resource and which updates the graph whenever the funds are transferred from onw account to the other.

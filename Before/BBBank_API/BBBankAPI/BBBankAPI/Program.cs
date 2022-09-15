@@ -7,17 +7,14 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 // Allow CORS request
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: MyAllowSpecificOrigins,
-                      builder =>
-                      {
-                          builder.WithOrigins("http://localhost:4200" , "https://bbanktest.z13.web.core.windows.net")
-                          .AllowAnyHeader()
-                                                  .AllowAnyMethod();
-                      });
-});
-
+builder.Services.AddCors(options => options.AddPolicy(MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .SetIsOriginAllowed((host) => true)
+                   .AllowCredentials();
+        }));
 // Add services to the container.
 
 builder.Services.AddControllers();

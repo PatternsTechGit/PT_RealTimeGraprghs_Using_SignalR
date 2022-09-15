@@ -22,20 +22,6 @@ builder.Services.AddCors(options => options.AddPolicy(MyAllowSpecificOrigins,
                    .AllowCredentials();
         }));
 
-
-// Allow CORS request
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy(name: MyAllowSpecificOrigins,
-//                      builder =>
-//                      {
-//                          builder.WithOrigins("http://localhost:4200", "https://bbanktest.z13.web.core.windows.net")
-//                             .AllowAnyMethod()
-//                            .AllowAnyHeader()
-//                            .AllowCredentials();
-//                      });
-//});
-
 // Add services to the container.
 
 builder.Services.AddControllers();
